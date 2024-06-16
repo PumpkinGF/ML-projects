@@ -1,0 +1,113 @@
+---
+title: "DTSA 5301 NYPD project"
+author: "GF"
+date: "2024-05-07"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+### About the Project
+The New York City shooting incident dataset provides a comprehensive record of firearm-related incidents occurring within the five boroughs of New York City. This dataset encompasses a range of information, including the date, time, location, and characteristics of shooting incidents, as well as details about the victims and perpetrators involved when available.
+
+This is a breakdown of every shooting incident that occurred in NYC going back to 2006 through the end of the previous calendar year. This data is manually extracted every quarter and reviewed by the Office of Management Analysis and Planning before being posted on the NYPD website. Each record represents a shooting incident in NYC and includes information about the event, the location and time of occurrence. In addition, information related to suspect and victim demographics is also included.
+
+The purpose of this analysis report is to examine and analyze trends, patterns, and insights derived from the New York City shooting incident data. By exploring various aspects of gun violence within the city, we aim to gain a deeper understanding of the factors contributing to such incidents, identify potential hotspots of criminal activity, and assess the effectiveness of intervention strategies and law enforcement efforts.
+
+
+### Preparation
+I'll put any library needed for the project here
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+install.packages("lubridate")
+```
+```{r}
+library(lubridate)
+```
+
+
+### Import Data
+First, let's start with importing the NYPD data
+
+```{r}
+url_NYPD = "https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD"
+NYPD_data = read.csv(url_NYPD)
+```
+
+### Brief Summary of Data
+```{r}
+head(NYPD_data)
+summary(NYPD_data)
+```
+
+### Data Tyding
+We can see from the summary that the data type of OCCUR_DATE is character. To make further analysis easier, I'll convert it to data format.
+
+```{r}
+NYPD_data$OCCUR_DATE = as.Date(NYPD_data$OCCUR_DATE, format = '%m/%d/%Y')
+```
+
+### Data Analysis
+First we'd like to know, how many incidents occur in each borough? Do some of them have more incidents than other boroughs?
+
+```{r}
+count(NYPD_data, BORO)
+```
+Let's plot the counts for clearer visualization.
+
+```{r}
+ggplot(data = NYPD_data) + geom_bar(aes(x = BORO, fill = BORO)) 
+```
+Next we want to replicate the above analysis, but taking into account the potential influence of gender and race.
+
+```{r}
+count(NYPD_data, BORO, VIC_SEX, VIC_RACE)
+```
+
+Let's also plot this result.
+
+```{r}
+ggplot(data = NYPD_data) + geom_bar(aes(x = BORO, fill = VIC_SEX))
+```
+
+```{r}
+ggplot(data = NYPD_data) + geom_bar(aes(x = BORO, fill = VIC_RACE))
+```
+We can tell from the plots that there are more male victims than females. Also, most of the victims are Black, followed by Bhite Hispanic and Black Hispanic.
+
+### Modeling
+We want to see the trend of number of incidents by month. To do that, we need to create a new table.
+
+```{r}
+Inci_by_Month = (count(NYPD_data, format(as.Date(NYPD_data$OCCUR_DATE), "%Y-%m")))
+```
+
+```{r}
+head(Inci_by_Month)
+```
+
+```{r}
+colnames(Inci_by_Month) = c("Month", "Count")
+```
+
+I'll then need to convert month from string to datetime using lubridate package.
+```{r}
+Inci_by_Month$Month_num = ym(Inci_by_Month$Month)
+```
+
+Now that we have the date formatted in a numerical way. It's time to plot the number of incidents by date (month).
+
+```{r}
+ggplot(Inci_by_Month, aes(x = Month_num, y = Count)) + geom_line()
+```
+
+Some potential bias could be the obvious increase in incidents in summers compared to in winters. We might need more data sources to figure out why this is happening.
+
+
